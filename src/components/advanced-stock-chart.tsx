@@ -358,7 +358,7 @@ export function AdvancedStockChart({ symbol, stockData }: AdvancedStockChartProp
   const swipeHandlers = useSwipeableCharts(
     chartViews.map(v => v.id),
     chartView,
-    setChartView
+    (view) => setChartView(view as ChartView)
   )
 
   const touchRef = useTouchGestures({
@@ -456,7 +456,7 @@ export function AdvancedStockChart({ symbol, stockData }: AdvancedStockChartProp
           </div>
 
           {/* Chart */}
-          <div ref={touchRef} className="mobile-chart h-[400px] sm:h-[500px] w-full touch-manipulation">
+          <div ref={touchRef as React.RefObject<HTMLDivElement>} className="mobile-chart h-[400px] sm:h-[500px] w-full touch-manipulation">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <motion.div
