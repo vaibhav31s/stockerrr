@@ -34,6 +34,8 @@ export default function WatchlistPage() {
   const [loading, setLoading] = useState(true)
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1D')
   const [periodData, setPeriodData] = useState<Map<string, number>>(new Map())
+  const [useRealData, setUseRealData] = useState(false)
+  const [syncing, setSyncing] = useState(false)
 
   const periods: { value: TimePeriod; label: string; days: number }[] = [
     { value: '1D', label: '1 Day', days: 1 },
@@ -43,6 +45,58 @@ export default function WatchlistPage() {
     { value: '6M', label: '6 Months', days: 180 },
     { value: '1Y', label: '1 Year', days: 365 },
   ]
+
+  // Auto-sync function: checks if today's data exists, syncs if missing
+  const autoSyncTodayData = async (symbols: string[]) => {
+    if (symbols.length === 0) return
+
+    try {
+      // Check if today's snapshot exists
+      const checkResponse = await fetch(`/api/stocks/snapshot?symbols=${symbols.join(',')}`)
+      const checkData = await checkResponse.json()
+
+      if (checkData.needsSync) {
+        console.log('Today\'s data missing, auto-syncing...', checkData.missingSymbols)
+        setSyncing(true)
+        
+        // Sync missing data
+        const syncResponse = await fetch('/api/stocks/snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbols: checkData.missingSymbols })
+        })
+
+        const syncResult = await syncResponse.json()
+        console.log('Auto-sync completed:', syncResult)
+        setSyncing(false)
+        
+        return true
+      }
+
+      console.log('Today\'s data already exists')
+      return false
+    } catch (error) {
+      console.error('Auto-sync error:', error)
+      setSyncing(false)
+      return false
+    }
+  }
+
+  // Fetch historical data from database
+  const fetchHistoricalData = async (symbol: string, daysAgo: number) => {
+    try {
+      const response = await fetch(`/api/stocks/historical?symbol=${symbol}&daysAgo=${daysAgo}`)
+      const data = await response.json()
+      
+      if (data.found) {
+        return data.price
+      }
+      return null
+    } catch (error) {
+      console.error(`Error fetching historical data for ${symbol}:`, error)
+      return null
+    }
+  }
 
   // Calculate historical price based on selected period
   const calculateHistoricalPrice = (currentPrice: number, changePercent: number, days: number) => {
@@ -129,6 +183,10 @@ export default function WatchlistPage() {
       }
 
       setLoading(true)
+      
+      // Auto-sync today's data if missing
+      await autoSyncTodayData(watchlist)
+      
       try {
         const promises = watchlist.map(async (symbol) => {
           try {
@@ -147,22 +205,38 @@ export default function WatchlistPage() {
         const validStocks = results.filter(Boolean)
         setStocks(validStocks)
         
-        // Calculate and store historical prices for all stocks at once
+        // Try to fetch real historical data from database first
         const selectedPeriodConfig = periods.find(p => p.value === selectedPeriod)!
         const newPeriodData = new Map<string, number>()
+        let hasRealData = false
         
-        validStocks.forEach((stock) => {
-          if (selectedPeriod !== '1D') {
-            const historicalPrice = calculateHistoricalPrice(
-              stock.price, 
-              stock.changePercent, 
-              selectedPeriodConfig.days
-            )
-            newPeriodData.set(stock.symbol, historicalPrice)
-          }
-        })
+        await Promise.all(
+          validStocks.map(async (stock) => {
+            if (selectedPeriod !== '1D') {
+              // Try to get real historical data from database
+              const historicalPrice = await fetchHistoricalData(
+                stock.symbol, 
+                selectedPeriodConfig.days
+              )
+              
+              if (historicalPrice) {
+                newPeriodData.set(stock.symbol, historicalPrice)
+                hasRealData = true
+              } else {
+                // Fallback to simulated data if no real data available
+                const simulatedPrice = calculateHistoricalPrice(
+                  stock.price, 
+                  stock.changePercent, 
+                  selectedPeriodConfig.days
+                )
+                newPeriodData.set(stock.symbol, simulatedPrice)
+              }
+            }
+          })
+        )
         
         setPeriodData(newPeriodData)
+        setUseRealData(hasRealData)
       } catch (error) {
         console.error('Error fetching watchlist:', error)
       } finally {
@@ -190,23 +264,60 @@ export default function WatchlistPage() {
                   <Star className="h-6 w-6 text-yellow-600 fill-yellow-600" />
                   My Watchlist
                 </h1>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
                   {watchlist.length} stock{watchlist.length !== 1 ? 's' : ''} tracked
+                  {syncing && (
+                    <span className="text-blue-600 text-xs">• Syncing today's data...</span>
+                  )}
+                  {useRealData && !syncing && (
+                    <span className="text-green-600 text-xs">• Using real historical data</span>
+                  )}
+                  {!useRealData && selectedPeriod !== '1D' && !syncing && (
+                    <span className="text-orange-600 text-xs">• Using simulated data</span>
+                  )}
                 </p>
               </div>
             </div>
             {watchlist.length > 0 && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (confirm('Are you sure you want to clear your entire watchlist?')) {
-                    clearWatchlist()
-                  }
-                }}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Clear All
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    if (watchlist.length > 0) {
+                      setSyncing(true)
+                      try {
+                        const response = await fetch('/api/stocks/snapshot', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ symbols: watchlist })
+                        })
+                        const result = await response.json()
+                        console.log('Manual sync result:', result)
+                        alert(`Synced ${result.saved || 0} stocks successfully!`)
+                      } catch (error) {
+                        console.error('Sync error:', error)
+                        alert('Failed to sync data')
+                      } finally {
+                        setSyncing(false)
+                      }
+                    }
+                  }}
+                  disabled={syncing}
+                >
+                  {syncing ? 'Syncing...' : 'Sync Today\'s Data'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to clear your entire watchlist?')) {
+                      clearWatchlist()
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -218,10 +329,21 @@ export default function WatchlistPage() {
           <Card className="border-blue-200 dark:border-blue-900">
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Performance Summary
-                </CardTitle>
+                <div className="flex items-center gap-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Performance Summary
+                  </CardTitle>
+                  {selectedPeriod !== '1D' && (
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      useRealData 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
+                    }`}>
+                      {useRealData ? '✓ Real Data' : '⚠ Simulated'}
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {periods.map((period) => (
                     <Button
