@@ -21,7 +21,7 @@ export default withAuth(
   }
 )
 
-// Protect ALL routes except auth pages
+// Protect ALL routes except auth pages and public pages
 export const config = {
   matcher: [
     /*
@@ -31,7 +31,10 @@ export const config = {
      * - /api/auth/* (NextAuth API routes)
      * - /_next/* (Next.js internals)
      * - /favicon.ico, /robots.txt, etc.
+     * - / (home page)
+     * - /dashboard (dashboard - has its own auth check)
+     * - /ai/* (AI pages - have their own auth checks)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|auth/login|auth/signup).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|auth/login|auth/signup|$|dashboard|ai/).*)',
   ],
 }
