@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma'
 // DELETE - Remove a specific stock from watchlist
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { symbol: string } }
+  context: { params: Promise<{ symbol: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -15,6 +15,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const params = await context.params
     const symbol = params.symbol.toUpperCase()
 
     // Get user from database
@@ -62,7 +63,7 @@ export async function DELETE(
 // PATCH - Update watchlist item (price targets, notes, etc.)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { symbol: string } }
+  context: { params: Promise<{ symbol: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -71,6 +72,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const params = await context.params
     const symbol = params.symbol.toUpperCase()
     const body = await request.json()
     const { addedPrice, targetPrice, stopLoss, notes } = body
