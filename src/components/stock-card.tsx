@@ -1,10 +1,12 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Brain } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { InteractiveStockChart } from '@/components/interactive-stock-chart'
+import Link from 'next/link'
 
 interface StockData {
   symbol: string
@@ -119,6 +121,12 @@ export function StockCard({ symbol }: StockCardProps) {
               <h3 className="text-lg font-semibold">{stockData.name}</h3>
               <p className="text-sm text-muted-foreground">{stockData.exchange}</p>
             </div>
+            <Link href={`/ai/analysis?symbol=${stockData.symbol}`}>
+              <Button variant="default" className="gap-2">
+                <Brain className="h-4 w-4" />
+                AI Analysis
+              </Button>
+            </Link>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
