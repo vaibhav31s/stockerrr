@@ -33,9 +33,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { symbol: string } }
 ) {
+  const { symbol } = params
+  
   try {
-    const { symbol } = params
-    
     if (!symbol) {
       return NextResponse.json(
         { error: 'Symbol parameter is required' },
