@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma migrate deploy && prisma generate && next build",
+    "vercel-build": "bash prisma/deploy.sh && next build",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
