@@ -1,73 +1,37 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { withAuth } from "next-auth/middleware"
+import { NextResponse } from "next/server"
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
+export default withAuth(
+  function middleware(req) {
+    // Log for debugging
+    console.log('🔒 Middleware checking:', req.nextUrl.pathname)
+    return NextResponse.next()
+  },
+  {
+    callbacks: {
+      authorized: ({ token, req }) => {
+        const isAuthenticated = !!token
+        console.log('🔐 Auth check:', req.nextUrl.pathname, 'Authenticated:', isAuthenticated)
+        return isAuthenticated
+      }
     },
-  })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-        },
-        remove(name: string, options: any) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-        },
-      },
+    pages: {
+      signIn: '/auth/login',
     }
-  )
+  }
+)
 
-  await supabase.auth.getUser()
-
-  return response
-}
-
+// Protect ALL routes except auth pages
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * Match all request paths except:
+     * - /auth/login (login page)
+     * - /auth/signup (signup page)
+     * - /api/auth/* (NextAuth API routes)
+     * - /_next/* (Next.js internals)
+     * - /favicon.ico, /robots.txt, etc.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|auth/login|auth/signup).*)',
   ],
 }

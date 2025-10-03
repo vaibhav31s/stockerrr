@@ -10,6 +10,7 @@ import { NewsCard } from '@/components/news-card'
 import { InsightsCard } from '@/components/insights-card'
 import { StockSearchAutocomplete } from '@/components/stock-search-autocomplete'
 import { WatchlistButton } from '@/components/watchlist-button'
+import { UserNav } from '@/components/user-nav'
 import Link from 'next/link'
 
 export function DashboardClient() {
@@ -55,12 +56,15 @@ export function DashboardClient() {
             AI-powered insights for Indian stock market
           </p>
         </div>
-        <Link href="/watchlist">
-          <Button variant="outline" className="gap-2">
-            <Activity className="h-4 w-4" />
-            My Watchlist
-          </Button>
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/watchlist">
+            <Button variant="outline" className="gap-2">
+              <Activity className="h-4 w-4" />
+              My Watchlist
+            </Button>
+          </Link>
+          <UserNav />
+        </div>
       </div>
 
       {/* Search Bar */}

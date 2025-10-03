@@ -1,4 +1,7 @@
 import { Suspense } from 'react'
+import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { DashboardClient } from './dashboard-client'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -15,7 +18,13 @@ function DashboardLoading() {
   )
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const session = await getServerSession(authOptions)
+
+  if (!session) {
+    redirect('/auth/login')
+  }
+
   return (
     <Suspense fallback={<DashboardLoading />}>
       <DashboardClient />

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { AIStockChat } from '@/components/ai-stock-chat'
 import { DeepAnalysis } from '@/components/deep-analysis'
+import { ProtectedRoute } from '@/components/protected-route'
 import { Brain, MessageSquare, TrendingUp, Scale, Shield, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -240,17 +241,19 @@ function AIAnalysisContent() {
 
 export default function AIAnalysisPage() {
   return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-[60vh]">
-          <div className="text-center">
-            <Brain className="h-12 w-12 animate-pulse mx-auto mb-4" />
-            <p className="text-muted-foreground">Loading AI Analysis...</p>
+    <ProtectedRoute>
+      <Suspense fallback={
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center h-[60vh]">
+            <div className="text-center">
+              <Brain className="h-12 w-12 animate-pulse mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading AI Analysis...</p>
+            </div>
           </div>
         </div>
-      </div>
-    }>
-      <AIAnalysisContent />
-    </Suspense>
+      }>
+        <AIAnalysisContent />
+      </Suspense>
+    </ProtectedRoute>
   )
 }
