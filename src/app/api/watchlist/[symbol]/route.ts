@@ -28,14 +28,27 @@ export async function DELETE(
       }
     })
 
-    if (!user || !user.watchlists[0]) {
-      return NextResponse.json({ error: 'Watchlist not found' }, { status: 404 })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get or create default watchlist
+    let watchlist = user.watchlists[0]
+    
+    if (!watchlist) {
+      watchlist = await prisma.watchlist.create({
+        data: {
+          userId: user.id,
+          name: 'My Watchlist',
+          isDefault: true,
+        }
+      })
     }
 
     // Delete the specific item
     const deletedItem = await prisma.watchlistItem.deleteMany({
       where: {
-        watchlistId: user.watchlists[0].id,
+        watchlistId: watchlist.id,
         symbol: symbol
       }
     })
@@ -87,14 +100,27 @@ export async function PATCH(
       }
     })
 
-    if (!user || !user.watchlists[0]) {
-      return NextResponse.json({ error: 'Watchlist not found' }, { status: 404 })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    // Get or create default watchlist
+    let watchlist = user.watchlists[0]
+    
+    if (!watchlist) {
+      watchlist = await prisma.watchlist.create({
+        data: {
+          userId: user.id,
+          name: 'My Watchlist',
+          isDefault: true,
+        }
+      })
     }
 
     // Update the item
     const updatedItem = await prisma.watchlistItem.updateMany({
       where: {
-        watchlistId: user.watchlists[0].id,
+        watchlistId: watchlist.id,
         symbol: symbol
       },
       data: {

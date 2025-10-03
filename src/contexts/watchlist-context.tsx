@@ -170,7 +170,7 @@ export function WatchlistProvider({ children }: { children: ReactNode }) {
     setWatchlist(prev => prev.filter(s => s !== upperSymbol))
     setWatchlistItems(prev => prev.filter(item => item.symbol !== upperSymbol))
 
-    if (status !== 'authenticated' || !session) {
+    if (status !== 'authenticated' || !session?.user?.email) {
       // Remove from localStorage if not authenticated
       try {
         const saved = localStorage.getItem('stockkap-watchlist')

@@ -34,7 +34,8 @@ export const config = {
      * - / (home page)
      * - /dashboard (dashboard - has its own auth check)
      * - /ai/* (AI pages - have their own auth checks)
+     * - /watchlist (watchlist - has client-side auth checks)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|auth/login|auth/signup|$|dashboard|ai/).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|auth/login|auth/signup|$|dashboard|ai/|watchlist).*)',
   ],
 }
