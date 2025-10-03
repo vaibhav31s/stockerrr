@@ -1,0 +1,214 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  watchlists    Watchlist[]
+  preferences   UserPreferences?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model UserPreferences {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  theme             String   @default("system")
+  defaultCurrency   String   @default("USD")
+  emailNotifications Boolean @default(true)
+  pushNotifications Boolean  @default(false)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Watchlist {
+  id        String           @id @default(cuid())
+  userId    String
+  name      String
+  isDefault Boolean          @default(false)
+  items     WatchlistItem[]
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([userId, name])
+}
+
+model WatchlistItem {
+  id          String    @id @default(cuid())
+  watchlistId String
+  symbol      String
+  addedPrice  Float?
+  targetPrice Float?
+  stopLoss    Float?
+  notes       String?
+  watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([watchlistId, symbol])
+}
+
+model Stock {
+  id              String            @id @default(cuid())
+  symbol          String            @unique
+  name            String
+  exchange        String?
+  sector          String?
+  industry        String?
+  marketCap       Float?
+  description     String?
+  logo            String?
+  website         String?
+  stockData       StockData[]
+  newsArticles    NewsArticle[]
+  aiInsights      AIInsight[]
+  sentimentScores SentimentScore[]
+  lastUpdated     DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([symbol])
+}
+
+model StockData {
+  id            String   @id @default(cuid())
+  stockId       String
+  symbol        String
+  open          Float
+  high          Float
+  low           Float
+  close         Float
+  volume        BigInt
+  adjustedClose Float?
+  timestamp     DateTime
+  timeframe     String   // '1m', '5m', '1h', '1d', etc.
+  stock         Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+
+  @@unique([stockId, timestamp, timeframe])
+  @@index([symbol, timestamp])
+  @@index([timestamp])
+}
+
+model NewsArticle {
+  id              String           @id @default(cuid())
+  stockId         String
+  title           String
+  description     String?
+  content         String?
+  url             String           @unique
+  source          String
+  author          String?
+  publishedAt     DateTime
+  imageUrl        String?
+  sentimentScores SentimentScore[]
+  stock           Stock            @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([stockId, publishedAt])
+  @@index([publishedAt])
+}
+
+model SentimentScore {
+  id            String       @id @default(cuid())
+  stockId       String
+  newsArticleId String?
+  sentiment     String       // 'positive', 'negative', 'neutral'
+  score         Float        // -1 to 1, where -1 is very negative, 1 is very positive
+  confidence    Float        // 0 to 1, confidence in the sentiment analysis
+  provider      String       // 'gemini', 'custom', etc.
+  metadata      Json?        // Additional data from the AI provider
+  stock         Stock        @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  newsArticle   NewsArticle? @relation(fields: [newsArticleId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+
+  @@index([stockId, createdAt])
+  @@index([sentiment])
+}
+
+model AIInsight {
+  id          String   @id @default(cuid())
+  stockId     String
+  type        String   // 'analysis', 'recommendation', 'prediction', etc.
+  title       String
+  content     String
+  confidence  Float    // 0 to 1, confidence in the insight
+  provider    String   // 'gemini', 'custom', etc.
+  metadata    Json?    // Additional data from the AI provider
+  isValid     Boolean  @default(true)
+  validUntil  DateTime?
+  stock       Stock    @relation(fields: [stockId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([stockId, createdAt])
+  @@index([type])
+  @@index([validUntil])
+}
+
+model MarketData {
+  id        String   @id @default(cuid())
+  symbol    String   // Market indices like 'SPY', 'QQQ', 'VIX'
+  name      String
+  value     Float
+  change    Float
+  changePercent Float
+  timestamp DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([symbol, timestamp])
+  @@index([symbol, timestamp])
+}
