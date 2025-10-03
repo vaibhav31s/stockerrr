@@ -53,6 +53,7 @@ export function InteractiveStockChart({ symbol, stockData }: InteractiveStockCha
 
   useEffect(() => {
     generateChartData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeRange, stockData])
 
   const generateChartData = () => {

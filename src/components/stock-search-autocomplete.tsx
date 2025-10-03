@@ -164,7 +164,7 @@ export function StockSearchAutocomplete({
       {isOpen && !isLoading && value.length > 0 && suggestions.length === 0 && (
         <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4">
           <p className="text-sm text-gray-700 dark:text-gray-300 text-center">
-            No stocks found for "{value}"
+            No stocks found for &quot;{value}&quot;
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">
             Try searching with NSE symbols like RELIANCE, TCS, or HDFCBANK

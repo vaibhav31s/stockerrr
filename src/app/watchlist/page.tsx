@@ -245,6 +245,7 @@ export default function WatchlistPage() {
     }
 
     fetchWatchlistStocks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [watchlist, selectedPeriod])
 
   return (
@@ -267,7 +268,7 @@ export default function WatchlistPage() {
                 <p className="text-sm text-muted-foreground flex items-center gap-2">
                   {watchlist.length} stock{watchlist.length !== 1 ? 's' : ''} tracked
                   {syncing && (
-                    <span className="text-blue-600 text-xs">• Syncing today's data...</span>
+                    <span className="text-blue-600 text-xs">• Syncing today&apos;s data...</span>
                   )}
                   {useRealData && !syncing && (
                     <span className="text-green-600 text-xs">• Using real historical data</span>
