@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
+import { CategoryAnalysisChat } from '@/components/category-analysis-chat'
 
 interface GroupedWatchlist {
   grouped: Record<string, any[]>
@@ -29,6 +30,7 @@ interface CategoryAnalysis {
   stockCount: number
   analysis: string
   stocks: string[]
+  stockDetails?: any[]
 }
 
 const categoryColors: Record<string, string> = {
@@ -285,14 +287,24 @@ export default function WatchlistGroupsPage() {
 
                   {/* Analysis */}
                   {analysis[category] ? (
-                    <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-lg">
-                      <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-purple-600" />
-                        AI Analysis
-                      </h3>
-                      <div className="prose dark:prose-invert max-w-none">
-                        <ReactMarkdown>{analysis[category].analysis}</ReactMarkdown>
+                    <div className="mt-6 space-y-4">
+                      <div className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-lg">
+                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                          <Sparkles className="h-5 w-5 text-purple-600" />
+                          AI Analysis
+                        </h3>
+                        <div className="prose dark:prose-invert max-w-none">
+                          <ReactMarkdown>{analysis[category].analysis}</ReactMarkdown>
+                        </div>
                       </div>
+
+                      {/* Chat Component */}
+                      <CategoryAnalysisChat
+                        category={category}
+                        analysis={analysis[category].analysis}
+                        stocks={analysis[category].stocks}
+                        stockDetails={analysis[category].stockDetails}
+                      />
                     </div>
                   ) : (
                     <Button 
