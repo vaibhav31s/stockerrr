@@ -507,7 +507,7 @@ export default function WatchlistPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => removeFromWatchlist(stock.symbol)}
+                            onClick={async () => await removeFromWatchlist(stock.symbol)}
                             className="text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />

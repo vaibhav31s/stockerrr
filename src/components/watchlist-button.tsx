@@ -18,16 +18,16 @@ export function WatchlistButton({
   size = 'default',
   showText = true 
 }: WatchlistButtonProps) {
-  const { isInWatchlist, addToWatchlist, removeFromWatchlist } = useWatchlist()
+  const { isInWatchlist, addToWatchlist, removeFromWatchlist, loading } = useWatchlist()
   const inWatchlist = isInWatchlist(symbol)
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (inWatchlist) {
       console.log(`Removing ${symbol} from watchlist`)
-      removeFromWatchlist(symbol)
+      await removeFromWatchlist(symbol)
     } else {
       console.log(`Adding ${symbol} to watchlist`)
-      addToWatchlist(symbol)
+      await addToWatchlist(symbol)
     }
   }
 
@@ -36,6 +36,7 @@ export function WatchlistButton({
       variant={variant}
       size={size}
       onClick={handleClick}
+      disabled={loading}
       className={cn(
         "gap-2",
         inWatchlist && "text-yellow-600 border-yellow-600 hover:bg-yellow-50"
