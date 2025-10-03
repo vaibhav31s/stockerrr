@@ -11,6 +11,8 @@ import { InsightsCard } from '@/components/insights-card'
 import { StockSearchAutocomplete } from '@/components/stock-search-autocomplete'
 import { WatchlistButton } from '@/components/watchlist-button'
 import { UserNav } from '@/components/user-nav'
+import { MarketHeatmap } from '@/components/market-heatmap'
+import { FloatingParticles, HoverGlow } from '@/components/visual-effects'
 import Link from 'next/link'
 
 export function DashboardClient() {
@@ -45,25 +47,29 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="mobile-container space-y-4 sm:space-y-6 pb-20 md:pb-6 relative">
+      <FloatingParticles className="opacity-30" />
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="mobile-text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Stock Analysis Dashboard
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-1 mobile-text-lg">
             AI-powered insights for Indian stock market
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Link href="/watchlist">
-            <Button variant="outline" className="gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Link href="/watchlist" className="flex-1 sm:flex-none">
+            <Button variant="outline" className="w-full gap-2 mobile-button">
               <Activity className="h-4 w-4" />
-              My Watchlist
+              <span className="hidden sm:inline">My Watchlist</span>
+              <span className="sm:hidden">Watchlist</span>
             </Button>
           </Link>
-          <UserNav />
+          <div className="hidden sm:block">
+            <UserNav />
+          </div>
         </div>
       </div>
 
@@ -87,40 +93,49 @@ export function DashboardClient() {
       </Card>
 
       {/* Market Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-green-200 dark:border-green-900">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Top Gainer</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">TATA MOTORS</div>
-            <p className="text-xs text-green-600 mt-1">+5.47%</p>
-          </CardContent>
-        </Card>
+      <div className="mobile-grid-3">
+        <HoverGlow glowColor="#10b981">
+          <Card className="border-green-200 dark:border-green-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Top Gainer</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="mobile-text-xl font-bold">TATA MOTORS</div>
+              <p className="text-xs text-green-600 mt-1">+5.47%</p>
+            </CardContent>
+          </Card>
+        </HoverGlow>
 
-        <Card className="border-red-200 dark:border-red-900">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Top Loser</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">WIPRO</div>
-            <p className="text-xs text-red-600 mt-1">-3.21%</p>
-          </CardContent>
-        </Card>
+        <HoverGlow glowColor="#ef4444">
+          <Card className="border-red-200 dark:border-red-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Top Loser</CardTitle>
+              <TrendingDown className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="mobile-text-xl font-bold">WIPRO</div>
+              <p className="text-xs text-red-600 mt-1">-3.21%</p>
+            </CardContent>
+          </Card>
+        </HoverGlow>
 
-        <Card className="border-blue-200 dark:border-blue-900">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">NIFTY 50</CardTitle>
-            <Activity className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">21,456.32</div>
-            <p className="text-xs text-green-600 mt-1">+0.78%</p>
-          </CardContent>
-        </Card>
+        <HoverGlow glowColor="#3b82f6">
+          <Card className="border-blue-200 dark:border-blue-900">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">NIFTY 50</CardTitle>
+              <Activity className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="mobile-text-xl font-bold">21,456.32</div>
+              <p className="text-xs text-green-600 mt-1">+0.78%</p>
+            </CardContent>
+          </Card>
+        </HoverGlow>
       </div>
+
+      {/* Market Heatmap */}
+      <MarketHeatmap />
 
       {/* Selected Stock Analysis */}
       {selectedStock && (
@@ -143,7 +158,7 @@ export function DashboardClient() {
 
           {/* Stock Data Grid */}
           {!isLoading && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="mobile-grid-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* Stock Card */}
               <div className="lg:col-span-2">
                 <StockCard symbol={selectedStock} />

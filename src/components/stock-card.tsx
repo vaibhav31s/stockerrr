@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { InteractiveStockChart } from '@/components/interactive-stock-chart'
+import { AdvancedStockChart } from '@/components/advanced-stock-chart'
+import { HoverGlow } from '@/components/visual-effects'
 import Link from 'next/link'
 
 interface StockData {
@@ -96,8 +98,8 @@ export function StockCard({ symbol }: StockCardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Interactive Chart */}
-      <InteractiveStockChart 
+      {/* Advanced Interactive Chart */}
+      <AdvancedStockChart 
         symbol={stockData.symbol}
         stockData={{
           symbol: stockData.symbol,
@@ -114,42 +116,44 @@ export function StockCard({ symbol }: StockCardProps) {
       />
       
       {/* Additional Stock Info Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">{stockData.name}</h3>
-              <p className="text-sm text-muted-foreground">{stockData.exchange}</p>
-            </div>
-            <Link href={`/ai/analysis?symbol=${stockData.symbol}`}>
-              <Button variant="default" className="gap-2">
-                <Brain className="h-4 w-4" />
-                AI Analysis
-              </Button>
-            </Link>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Market Cap</span>
+      <HoverGlow glowColor={isPositive ? "#10b981" : "#ef4444"}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">{stockData.name}</h3>
+                <p className="text-sm text-muted-foreground">{stockData.exchange}</p>
               </div>
-              <p className="font-medium">
-                ₹{stockData.marketCap ? (stockData.marketCap / 10000000).toFixed(0) + ' Cr' : 'N/A'}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">P/E Ratio</span>
+              <Link href={`/ai/analysis?symbol=${stockData.symbol}`}>
+                <Button variant="default" className="gap-2">
+                  <Brain className="h-4 w-4" />
+                  AI Analysis
+                </Button>
+              </Link>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Market Cap</span>
+                </div>
+                <p className="font-medium">
+                  ₹{stockData.marketCap ? (stockData.marketCap / 10000000).toFixed(0) + ' Cr' : 'N/A'}
+                </p>
               </div>
-              <p className="font-medium">{stockData.pe?.toFixed(2) || 'N/A'}</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">P/E Ratio</span>
+                </div>
+                <p className="font-medium">{stockData.pe?.toFixed(2) || 'N/A'}</p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </HoverGlow>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { Brain, Target, AlertTriangle, TrendingUp, Clock } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { HoverGlow } from '@/components/visual-effects'
 
 interface Insights {
   recommendation: 'Buy' | 'Hold' | 'Sell'
@@ -110,107 +111,109 @@ export function InsightsCard({ symbol }: InsightsCardProps) {
   const { insights } = insightsData
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Brain className="h-5 w-5" />
-          AI-Powered Insights
-          <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            Updated {new Date(insights.lastUpdated).toLocaleTimeString()}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {/* Recommendation & Target */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Recommendation</p>
-                  <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border ${
-                    getRecommendationColor(insights.recommendation)
-                  }`}>
-                    {insights.recommendation}
+    <HoverGlow glowColor={insights.recommendation === 'Buy' ? "#10b981" : insights.recommendation === 'Sell' ? "#ef4444" : "#f59e0b"}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-5 w-5" />
+            AI-Powered Insights
+            <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              Updated {new Date(insights.lastUpdated).toLocaleTimeString()}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Recommendation & Target */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-8 w-8 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Recommendation</p>
+                    <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium border ${
+                      getRecommendationColor(insights.recommendation)
+                    }`}>
+                      {insights.recommendation}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Confidence: {(insights.confidence * 100).toFixed(0)}%
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Confidence: {(insights.confidence * 100).toFixed(0)}%
-                  </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Target className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Price Target</p>
-                  <p className="text-2xl font-bold">₹{insights.targetPrice?.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {((insights.targetPrice / insightsData.stockData.price - 1) * 100).toFixed(1)}% 
-                    {insights.targetPrice > insightsData.stockData.price ? ' upside' : ' downside'}
-                  </p>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <Target className="h-8 w-8 text-green-600" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Price Target</p>
+                    <p className="text-2xl font-bold">₹{insights.targetPrice?.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {((insights.targetPrice / insightsData.stockData.price - 1) * 100).toFixed(1)}% 
+                      {insights.targetPrice > insightsData.stockData.price ? ' upside' : ' downside'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Key Insights */}
-        <div>
-          <h4 className="font-medium mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Key Insights
-          </h4>
-          <ul className="space-y-2">
-            {insights.keyInsights.map((insight, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
-                {insight}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Risks */}
-        <div>
-          <h4 className="font-medium mb-3 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
-            Key Risks
-          </h4>
-          <ul className="space-y-2">
-            {insights.risks.map((risk, index) => (
-              <li key={index} className="flex items-start gap-2 text-sm">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                {risk}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Analysis Sections */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-medium mb-2">Technical Analysis</h4>
-            <p className="text-sm text-muted-foreground">{insights.technicalAnalysis}</p>
+              </CardContent>
+            </Card>
           </div>
-          <div>
-            <h4 className="font-medium mb-2">News Impact</h4>
-            <p className="text-sm text-muted-foreground">{insights.newsImpact}</p>
-          </div>
-        </div>
 
-        <div className="pt-4 border-t">
-          <p className="text-xs text-muted-foreground">
-            * This analysis is generated by AI and should not be considered as financial advice. 
-            Always do your own research before making investment decisions.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          {/* Key Insights */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Key Insights
+            </h4>
+            <ul className="space-y-2">
+              {insights.keyInsights.map((insight, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                  {insight}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Risks */}
+          <div>
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Key Risks
+            </h4>
+            <ul className="space-y-2">
+              {insights.risks.map((risk, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
+                  {risk}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Analysis Sections */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium mb-2">Technical Analysis</h4>
+              <p className="text-sm text-muted-foreground">{insights.technicalAnalysis}</p>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">News Impact</h4>
+              <p className="text-sm text-muted-foreground">{insights.newsImpact}</p>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t">
+            <p className="text-xs text-muted-foreground">
+              * This analysis is generated by AI and should not be considered as financial advice. 
+              Always do your own research before making investment decisions.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </HoverGlow>
   )
 }

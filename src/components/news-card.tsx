@@ -5,6 +5,7 @@ import { Newspaper, TrendingUp, TrendingDown, AlertCircle, Clock } from 'lucide-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { HoverGlow } from '@/components/visual-effects'
 
 interface NewsArticle {
   title: string
@@ -137,70 +138,72 @@ export function NewsCard({ symbol }: NewsCardProps) {
   const sentimentLabel = overallSentiment > 0.1 ? 'positive' : overallSentiment < -0.1 ? 'negative' : 'neutral'
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Newspaper className="h-5 w-5" />
-            News & Sentiment
+    <HoverGlow glowColor={sentimentLabel === 'positive' ? "#10b981" : sentimentLabel === 'negative' ? "#ef4444" : "#6b7280"}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Newspaper className="h-5 w-5" />
+              News & Sentiment
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge className={getSentimentColor(sentimentLabel)}>
+                {getSentimentIcon(sentimentLabel)}
+                <span className="ml-1 capitalize">{sentimentLabel}</span>
+              </Badge>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-sm text-muted-foreground">
+            Overall market sentiment: <span className="font-medium">{(overallSentiment * 100).toFixed(1)}% {sentimentLabel}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge className={getSentimentColor(sentimentLabel)}>
-              {getSentimentIcon(sentimentLabel)}
-              <span className="ml-1 capitalize">{sentimentLabel}</span>
-            </Badge>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          Overall market sentiment: <span className="font-medium">{(overallSentiment * 100).toFixed(1)}% {sentimentLabel}</span>
-        </div>
-        
-        <div className="space-y-4">
-          {newsData.articles.slice(0, 4).map((article, index) => (
-            <div 
-              key={index} 
-              className="border-b border-gray-100 last:border-b-0 pb-4 last:pb-0 hover:bg-gray-50 p-2 rounded cursor-pointer transition-colors"
-              onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
-            >
-              <div className="space-y-2">
-                <h4 
-                  className="font-medium text-sm leading-5 hover:text-blue-600 cursor-pointer"
-                  onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
-                >
-                  {article.title}
-                </h4>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {article.description}
-                </p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant="outline" 
-                      className={`text-xs ${getSentimentColor(article.sentiment.label)}`}
-                    >
-                      {getSentimentIcon(article.sentiment.label)}
-                      <span className="ml-1">{(article.sentiment.score * 100).toFixed(0)}%</span>
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{article.source}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {getTimeAgo(article.publishedAt)}
+          
+          <div className="space-y-4">
+            {newsData.articles.slice(0, 4).map((article, index) => (
+              <div 
+                key={index} 
+                className="border-b border-gray-100 last:border-b-0 pb-4 last:pb-0 hover:bg-gray-50 p-2 rounded cursor-pointer transition-colors"
+                onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
+              >
+                <div className="space-y-2">
+                  <h4 
+                    className="font-medium text-sm leading-5 hover:text-blue-600 cursor-pointer"
+                    onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
+                  >
+                    {article.title}
+                  </h4>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {article.description}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${getSentimentColor(article.sentiment.label)}`}
+                      >
+                        {getSentimentIcon(article.sentiment.label)}
+                        <span className="ml-1">{(article.sentiment.score * 100).toFixed(0)}%</span>
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">{article.source}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      {getTimeAgo(article.publishedAt)}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
-        <div className="pt-2 border-t">
-          <p className="text-xs text-muted-foreground">
-            News sources: Economic Times, Moneycontrol, Business Today, Mint, Financial Express
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="pt-2 border-t">
+            <p className="text-xs text-muted-foreground">
+              News sources: Economic Times, Moneycontrol, Business Today, Mint, Financial Express
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </HoverGlow>
   )
 }

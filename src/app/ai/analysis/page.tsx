@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { AIStockChat } from '@/components/ai-stock-chat'
 import { DeepAnalysis } from '@/components/deep-analysis'
 import { ProtectedRoute } from '@/components/protected-route'
-import { Brain, MessageSquare, TrendingUp, Scale, Shield, ArrowLeft } from 'lucide-react'
+import { Brain, MessageSquare, TrendingUp, Scale, Shield, ArrowLeft, Loader2, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 function AIAnalysisContent() {
@@ -17,6 +17,9 @@ function AIAnalysisContent() {
   const [newsData, setNewsData] = useState<any>(null)
   const [riskData, setRiskData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [riskLoading, setRiskLoading] = useState(false)
+  const [riskError, setRiskError] = useState<string | null>(null)
+  const [riskSuccess, setRiskSuccess] = useState(false)
 
   useEffect(() => {
     if (symbol) {
@@ -53,16 +56,31 @@ function AIAnalysisContent() {
     if (!stockData) return
 
     try {
+      setRiskLoading(true)
+      setRiskError(null)
+      setRiskSuccess(false)
+
       const response = await fetch('/api/ai/risk-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbol, stockData, newsData })
       })
 
+      if (!response.ok) {
+        throw new Error('Failed to calculate risk score')
+      }
+
       const data = await response.json()
       setRiskData(data.riskAnalysis)
-    } catch (error) {
+      setRiskSuccess(true)
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setRiskSuccess(false), 3000)
+    } catch (error: any) {
       console.error('Error calculating risk:', error)
+      setRiskError(error.message || 'Failed to calculate risk score. Please try again.')
+    } finally {
+      setRiskLoading(false)
     }
   }
 
@@ -160,11 +178,41 @@ function AIAnalysisContent() {
                   AI-calculated risk assessment
                 </CardDescription>
               </div>
-              <Button onClick={calculateRiskScore} disabled={!stockData}>
-                Calculate Risk
+              <Button 
+                onClick={calculateRiskScore} 
+                disabled={!stockData || riskLoading}
+                className="gap-2"
+              >
+                {riskLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Calculating...
+                  </>
+                ) : (
+                  <>
+                    <Scale className="h-4 w-4" />
+                    Calculate Risk
+                  </>
+                )}
               </Button>
             </div>
           </CardHeader>
+          {riskError && (
+            <CardContent className="pt-0">
+              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <p className="text-sm text-red-700 dark:text-red-300">{riskError}</p>
+              </div>
+            </CardContent>
+          )}
+          {riskSuccess && (
+            <CardContent className="pt-0">
+              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                <Shield className="h-4 w-4 text-green-600" />
+                <p className="text-sm text-green-700 dark:text-green-300">Risk analysis completed successfully!</p>
+              </div>
+            </CardContent>
+          )}
           {riskData && (
             <CardContent className="space-y-4">
               <div className="text-center p-6 bg-muted rounded-lg">
