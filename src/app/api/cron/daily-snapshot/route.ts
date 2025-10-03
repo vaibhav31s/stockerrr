@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabaseAdmin } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 // This endpoint will be called daily at 4 PM IST (10:30 AM UTC) by Vercel Cron
 export async function GET(request: Request) {
@@ -17,8 +17,20 @@ export async function GET(request: Request) {
 
     console.log(`Starting daily snapshot at ${new Date().toISOString()}`)
 
+    // Create Supabase admin client
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+
     // Get all users
-    const { data: users, error: usersError } = await supabaseAdmin.auth.admin.listUsers()
+    const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers()
     
     if (usersError) {
       console.error('Error fetching users:', usersError)
@@ -29,10 +41,10 @@ export async function GET(request: Request) {
     let totalErrors = 0
     const allSymbols = new Set<string>()
 
-    // Collect all unique symbols from all users' historical data
-    for (const user of users.users) {
+    // Collect all unique symbols from all users' stock snapshots
+    for (const user of users) {
       const { data: userStocks } = await supabaseAdmin
-        .from('stock_data')
+        .from('stock_snapshots')
         .select('symbol')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -45,6 +57,18 @@ export async function GET(request: Request) {
 
     const symbols = Array.from(allSymbols)
     console.log(`Found ${symbols.length} unique stocks to snapshot`)
+
+    if (symbols.length === 0) {
+      console.log('No stocks to snapshot')
+      return NextResponse.json({
+        timestamp: new Date().toISOString(),
+        total: 0,
+        successful: 0,
+        skipped: 0,
+        failed: 0,
+        message: 'No stocks found to snapshot'
+      })
+    }
 
     // Fetch and store snapshots for all symbols
     const results = await Promise.allSettled(
@@ -77,62 +101,72 @@ export async function GET(request: Request) {
           }
 
           const latestIndex = quote.close.length - 1
+          const currentPrice = quote.close[latestIndex]
+          const previousClose = meta.chartPreviousClose || meta.previousClose || currentPrice
+          const change = currentPrice - previousClose
+          const changePercent = ((change / previousClose) * 100)
 
-          // Find or create stock
-          let stock = await prisma.stock.findUnique({
-            where: { symbol }
-          })
-
-          if (!stock) {
-            stock = await prisma.stock.create({
-              data: {
-                symbol,
-                name: meta.longName || symbol,
-                exchange: meta.exchangeName || 'NSE',
-              }
-            })
-          }
-
-          // Check if snapshot already exists for today
+          // Get today's date for snapshot
           const today = new Date()
-          today.setHours(0, 0, 0, 0)
-          const tomorrow = new Date(today)
-          tomorrow.setDate(tomorrow.getDate() + 1)
+          const snapshotDate = today.toISOString().split('T')[0]
+          const snapshotTime = today.toTimeString().split(' ')[0]
 
-          const existingSnapshot = await prisma.stockData.findFirst({
-            where: {
-              stockId: stock.id,
-              timeframe: '1d',
-              timestamp: {
-                gte: today,
-                lt: tomorrow
-              }
-            }
+          // Store snapshot for each user who has this stock
+          const usersWithStock = users.filter(async (user) => {
+            const { data } = await supabaseAdmin
+              .from('stock_snapshots')
+              .select('symbol')
+              .eq('user_id', user.id)
+              .eq('symbol', symbol)
+              .single()
+            return !!data
           })
 
-          if (existingSnapshot) {
-            console.log(`Snapshot already exists for ${symbol}`)
-            return { symbol, success: true, skipped: true }
+          let savedCount = 0
+          let skippedCount = 0
+
+          for (const user of users) {
+            // Check if snapshot already exists for this user and symbol today
+            const { data: existing } = await supabaseAdmin
+              .from('stock_snapshots')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('symbol', symbol)
+              .eq('snapshot_date', snapshotDate)
+              .single()
+
+            if (existing) {
+              skippedCount++
+              continue
+            }
+
+            // Create snapshot for this user
+            const { error: insertError } = await supabaseAdmin
+              .from('stock_snapshots')
+              .insert({
+                user_id: user.id,
+                symbol,
+                price: currentPrice,
+                change,
+                change_percent: changePercent,
+                volume: quote.volume[latestIndex],
+                market_cap: meta.marketCap || null,
+                snapshot_date: snapshotDate,
+                snapshot_time: snapshotTime
+              })
+
+            if (!insertError) {
+              savedCount++
+            }
           }
 
-          // Create snapshot
-          await prisma.stockData.create({
-            data: {
-              stockId: stock.id,
-              symbol: symbol,
-              open: quote.open[latestIndex],
-              high: quote.high[latestIndex],
-              low: quote.low[latestIndex],
-              close: quote.close[latestIndex],
-              volume: BigInt(quote.volume[latestIndex]),
-              adjustedClose: quote.close[latestIndex],
-              timestamp: new Date(),
-              timeframe: '1d',
-            }
-          })
-
-          console.log(`Snapshot created for ${symbol}`)
-          return { symbol, success: true }
+          console.log(`Snapshot for ${symbol}: ${savedCount} saved, ${skippedCount} skipped`)
+          return { 
+            symbol, 
+            success: true, 
+            saved: savedCount,
+            skipped: skippedCount 
+          }
         } catch (error) {
           console.error(`Error for ${symbol}:`, error)
           return { symbol, success: false, error: String(error) }
@@ -144,17 +178,12 @@ export async function GET(request: Request) {
       r.status === 'fulfilled' && r.value.success
     ).length
     
-    const skipped = results.filter(r => 
-      r.status === 'fulfilled' && r.value.skipped
-    ).length
-    
-    const failed = results.length - successful - skipped
+    const failed = results.length - successful
 
     const summary = {
       timestamp: new Date().toISOString(),
       total: symbols.length,
       successful,
-      skipped,
       failed,
       results: results.map(r => 
         r.status === 'fulfilled' ? r.value : { error: r.reason }
@@ -170,7 +199,5 @@ export async function GET(request: Request) {
       { error: 'Failed to run daily snapshot', details: String(error) },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }
