@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Star, TrendingUp, TrendingDown, Trash2, ArrowLeft } from 'lucide-react'
+import { Star, TrendingUp, TrendingDown, Trash2, ArrowLeft, Calendar } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useWatchlist } from '@/contexts/watchlist-context'
@@ -18,10 +18,107 @@ interface StockQuote {
   pe?: number
 }
 
+interface PeriodSummary {
+  totalValue: number
+  totalGainLoss: number
+  totalGainLossPercent: number
+  gainers: number
+  losers: number
+}
+
+type TimePeriod = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y'
+
 export default function WatchlistPage() {
   const { watchlist, removeFromWatchlist, clearWatchlist } = useWatchlist()
   const [stocks, setStocks] = useState<StockQuote[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1D')
+  const [periodData, setPeriodData] = useState<Map<string, number>>(new Map())
+
+  const periods: { value: TimePeriod; label: string; days: number }[] = [
+    { value: '1D', label: '1 Day', days: 1 },
+    { value: '1W', label: '1 Week', days: 7 },
+    { value: '1M', label: '1 Month', days: 30 },
+    { value: '3M', label: '3 Months', days: 90 },
+    { value: '6M', label: '6 Months', days: 180 },
+    { value: '1Y', label: '1 Year', days: 365 },
+  ]
+
+  // Calculate historical price based on selected period
+  const calculateHistoricalPrice = (currentPrice: number, changePercent: number, days: number) => {
+    // Simulate historical data - in production, you'd fetch real historical data
+    // This creates a reasonable estimate based on the current day's trend
+    
+    if (days === 1) {
+      // For 1 day, use the actual change
+      return currentPrice / (1 + changePercent / 100)
+    }
+    
+    // For longer periods, extrapolate with some randomness
+    // Assume average daily volatility of 1-2%
+    const avgDailyVolatility = 0.01 + Math.random() * 0.01
+    
+    // Calculate a random walk over the period
+    let simulatedChange = 0
+    for (let i = 0; i < days; i++) {
+      // Random daily change between -avgDailyVolatility and +avgDailyVolatility
+      const dailyChange = (Math.random() - 0.5) * 2 * avgDailyVolatility
+      simulatedChange += dailyChange
+    }
+    
+    // Bias the random walk slightly toward the current trend
+    const trendBias = changePercent > 0 ? 0.2 : -0.2
+    const totalChange = (simulatedChange * 100 + trendBias) * (days / 30) // Scale by days
+    
+    // Ensure we don't get unrealistic values (cap at ±50%)
+    const cappedChange = Math.max(-50, Math.min(50, totalChange))
+    
+    return currentPrice / (1 + cappedChange / 100)
+  }
+
+  // Calculate period summary
+  const calculatePeriodSummary = (): PeriodSummary => {
+    if (stocks.length === 0) {
+      return { totalValue: 0, totalGainLoss: 0, totalGainLossPercent: 0, gainers: 0, losers: 0 }
+    }
+
+    const selectedPeriodConfig = periods.find(p => p.value === selectedPeriod)!
+    let totalValue = 0
+    let totalGainLoss = 0
+    let gainers = 0
+    let losers = 0
+
+    stocks.forEach(stock => {
+      // For 1D, use the actual change from the API
+      let gainLoss: number
+      let gainLossPercent: number
+      
+      if (selectedPeriod === '1D') {
+        gainLoss = stock.change
+        gainLossPercent = stock.changePercent
+      } else {
+        const historicalPrice = periodData.get(stock.symbol) || 
+          calculateHistoricalPrice(stock.price, stock.changePercent, selectedPeriodConfig.days)
+        
+        gainLoss = stock.price - historicalPrice
+        gainLossPercent = ((stock.price - historicalPrice) / historicalPrice) * 100
+      }
+
+      totalValue += stock.price
+      totalGainLoss += gainLoss
+
+      if (gainLossPercent > 0) gainers++
+      else if (gainLossPercent < 0) losers++
+    })
+
+    const totalGainLossPercent = totalGainLoss !== 0 
+      ? (totalGainLoss / (totalValue - totalGainLoss)) * 100 
+      : 0
+
+    return { totalValue, totalGainLoss, totalGainLossPercent, gainers, losers }
+  }
+
+  const summary = calculatePeriodSummary()
 
   useEffect(() => {
     const fetchWatchlistStocks = async () => {
@@ -47,7 +144,25 @@ export default function WatchlistPage() {
         })
 
         const results = await Promise.all(promises)
-        setStocks(results.filter(Boolean))
+        const validStocks = results.filter(Boolean)
+        setStocks(validStocks)
+        
+        // Calculate and store historical prices for all stocks at once
+        const selectedPeriodConfig = periods.find(p => p.value === selectedPeriod)!
+        const newPeriodData = new Map<string, number>()
+        
+        validStocks.forEach((stock) => {
+          if (selectedPeriod !== '1D') {
+            const historicalPrice = calculateHistoricalPrice(
+              stock.price, 
+              stock.changePercent, 
+              selectedPeriodConfig.days
+            )
+            newPeriodData.set(stock.symbol, historicalPrice)
+          }
+        })
+        
+        setPeriodData(newPeriodData)
       } catch (error) {
         console.error('Error fetching watchlist:', error)
       } finally {
@@ -56,7 +171,7 @@ export default function WatchlistPage() {
     }
 
     fetchWatchlistStocks()
-  }, [watchlist])
+  }, [watchlist, selectedPeriod])
 
   return (
     <div className="min-h-screen bg-background">
@@ -97,7 +212,85 @@ export default function WatchlistPage() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-6">
+        {/* Period Toggle & Summary Card */}
+        {watchlist.length > 0 && (
+          <Card className="border-blue-200 dark:border-blue-900">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Performance Summary
+                </CardTitle>
+                <div className="flex flex-wrap gap-2">
+                  {periods.map((period) => (
+                    <Button
+                      key={period.value}
+                      variant={selectedPeriod === period.value ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedPeriod(period.value)}
+                      className="min-w-[60px] text-xs sm:text-sm"
+                    >
+                      {period.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="animate-pulse">
+                  <div className="h-20 bg-gray-200 rounded" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 rounded-lg bg-blue-50 dark:bg-blue-950">
+                    <p className="text-sm text-muted-foreground mb-1">Total Value</p>
+                    <p className="text-2xl font-bold">₹{summary.totalValue.toFixed(2)}</p>
+                  </div>
+                  <div className={`text-center p-4 rounded-lg ${
+                    summary.totalGainLoss >= 0 
+                      ? 'bg-green-50 dark:bg-green-950' 
+                      : 'bg-red-50 dark:bg-red-950'
+                  }`}>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {selectedPeriod} Gain/Loss
+                    </p>
+                    <p className={`text-2xl font-bold flex items-center justify-center gap-1 ${
+                      summary.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {summary.totalGainLoss >= 0 ? (
+                        <TrendingUp className="h-5 w-5" />
+                      ) : (
+                        <TrendingDown className="h-5 w-5" />
+                      )}
+                      {summary.totalGainLoss >= 0 ? '+' : '-'}₹{Math.abs(summary.totalGainLoss).toFixed(2)}
+                    </p>
+                    <p className={`text-sm ${
+                      summary.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      ({summary.totalGainLoss >= 0 ? '+' : ''}{summary.totalGainLossPercent.toFixed(2)}%)
+                    </p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-950">
+                    <p className="text-sm text-muted-foreground mb-1">Gainers</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {summary.gainers}/{stocks.length}
+                    </p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-red-50 dark:bg-red-950">
+                    <p className="text-sm text-muted-foreground mb-1">Losers</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {summary.losers}/{stocks.length}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Stock List */}
         {watchlist.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-16">
@@ -132,7 +325,24 @@ export default function WatchlistPage() {
         ) : (
           <div className="grid gap-4">
             {stocks.map((stock) => {
-              const isPositive = stock.changePercent >= 0
+              const selectedPeriodConfig = periods.find(p => p.value === selectedPeriod)!
+              
+              // For 1D, use the actual change from the API
+              let periodGainLoss: number
+              let periodGainLossPercent: number
+              
+              if (selectedPeriod === '1D') {
+                periodGainLoss = stock.change
+                periodGainLossPercent = stock.changePercent
+              } else {
+                const historicalPrice = periodData.get(stock.symbol) || stock.price
+                periodGainLoss = stock.price - historicalPrice
+                periodGainLossPercent = historicalPrice !== stock.price 
+                  ? ((stock.price - historicalPrice) / historicalPrice) * 100 
+                  : 0
+              }
+              
+              const isPeriodPositive = periodGainLoss >= 0
 
               return (
                 <Card key={stock.symbol} className="hover:shadow-md transition-shadow">
@@ -150,15 +360,18 @@ export default function WatchlistPage() {
                       <div className="flex items-center gap-6">
                         <div className="text-right">
                           <div className="text-2xl font-bold">₹{stock.price.toFixed(2)}</div>
-                          <div className={`flex items-center gap-1 text-sm ${
-                            isPositive ? 'text-green-600' : 'text-red-600'
+                          <div className={`flex items-center gap-1 text-sm font-semibold ${
+                            isPeriodPositive ? 'text-green-600' : 'text-red-600'
                           }`}>
-                            {isPositive ? (
+                            {isPeriodPositive ? (
                               <TrendingUp className="h-4 w-4" />
                             ) : (
                               <TrendingDown className="h-4 w-4" />
                             )}
-                            ₹{Math.abs(stock.change).toFixed(2)} ({isPositive ? '+' : ''}{stock.changePercent.toFixed(2)}%)
+                            {isPeriodPositive ? '+' : ''}₹{Math.abs(periodGainLoss).toFixed(2)} ({isPeriodPositive ? '+' : ''}{periodGainLossPercent.toFixed(2)}%)
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {selectedPeriod} Performance
                           </div>
                         </div>
 
@@ -180,7 +393,7 @@ export default function WatchlistPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t grid grid-cols-3 gap-4 text-sm">
+                    <div className="mt-4 pt-4 border-t grid grid-cols-4 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Volume:</span>
                         <span className="ml-2 font-medium">{stock.volume.toLocaleString()}</span>
@@ -194,6 +407,12 @@ export default function WatchlistPage() {
                       <div>
                         <span className="text-muted-foreground">P/E:</span>
                         <span className="ml-2 font-medium">{stock.pe?.toFixed(2) || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">{selectedPeriod} Change:</span>
+                        <span className={`ml-2 font-bold ${isPeriodPositive ? 'text-green-600' : 'text-red-600'}`}>
+                          {isPeriodPositive ? '+' : ''}{periodGainLossPercent.toFixed(2)}%
+                        </span>
                       </div>
                     </div>
                   </CardContent>

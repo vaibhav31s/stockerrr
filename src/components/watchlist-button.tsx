@@ -23,8 +23,10 @@ export function WatchlistButton({
 
   const handleClick = () => {
     if (inWatchlist) {
+      console.log(`Removing ${symbol} from watchlist`)
       removeFromWatchlist(symbol)
     } else {
+      console.log(`Adding ${symbol} to watchlist`)
       addToWatchlist(symbol)
     }
   }

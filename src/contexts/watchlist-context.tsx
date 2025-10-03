@@ -14,23 +14,45 @@ const WatchlistContext = createContext<WatchlistContextType | undefined>(undefin
 
 export function WatchlistProvider({ children }: { children: ReactNode }) {
   const [watchlist, setWatchlist] = useState<string[]>([])
+  const [isClient, setIsClient] = useState(false)
+
+  // Set client-side flag
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Load watchlist from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('stockkap-watchlist')
-    if (saved) {
-      try {
-        setWatchlist(JSON.parse(saved))
-      } catch (error) {
-        console.error('Error loading watchlist:', error)
+    if (!isClient) return
+    
+    try {
+      const saved = localStorage.getItem('stockkap-watchlist')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        console.log('Loaded watchlist from localStorage:', parsed)
+        setWatchlist(parsed)
       }
+    } catch (error) {
+      console.error('Error loading watchlist:', error)
     }
-  }, [])
+  }, [isClient])
 
   // Save watchlist to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('stockkap-watchlist', JSON.stringify(watchlist))
-  }, [watchlist])
+    if (!isClient) return
+    
+    try {
+      if (watchlist.length === 0) {
+        localStorage.removeItem('stockkap-watchlist')
+        console.log('Removed empty watchlist from localStorage')
+      } else {
+        localStorage.setItem('stockkap-watchlist', JSON.stringify(watchlist))
+        console.log('Saved watchlist to localStorage:', watchlist)
+      }
+    } catch (error) {
+      console.error('Error saving watchlist:', error)
+    }
+  }, [watchlist, isClient])
 
   const addToWatchlist = (symbol: string) => {
     setWatchlist(prev => {
@@ -51,6 +73,14 @@ export function WatchlistProvider({ children }: { children: ReactNode }) {
 
   const clearWatchlist = () => {
     setWatchlist([])
+    if (isClient) {
+      try {
+        localStorage.removeItem('stockkap-watchlist')
+        console.log('Cleared watchlist from localStorage')
+      } catch (error) {
+        console.error('Error clearing watchlist:', error)
+      }
+    }
   }
 
   return (
