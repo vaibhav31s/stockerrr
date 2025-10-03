@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { createClient } from '@supabase/supabase-js'
 
 // GET /api/stocks/history/[symbol] - Get historical data for a stock
 export async function GET(
@@ -16,34 +14,39 @@ export async function GET(
     // Calculate the start date
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - days)
+    const startDateStr = startDate.toISOString().split('T')[0]
 
-    // Fetch stock data from database
-    const stock = await prisma.stock.findUnique({
-      where: { symbol },
-      include: {
-        stockData: {
-          where: {
-            timeframe: '1d',
-            timestamp: {
-              gte: startDate
-            }
-          },
-          orderBy: {
-            timestamp: 'desc'
-          }
-        }
-      }
-    })
+    // Create Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-    if (!stock) {
+    // Fetch stock snapshots from database
+    const { data: snapshots, error } = await supabase
+      .from('stock_snapshots')
+      .select('*')
+      .eq('symbol', symbol)
+      .gte('snapshot_date', startDateStr)
+      .order('snapshot_date', { ascending: false })
+
+    if (error) {
+      console.error('Error fetching from Supabase:', error)
       return NextResponse.json(
-        { error: 'Stock not found in database' },
+        { error: 'Failed to fetch data from database' },
+        { status: 500 }
+      )
+    }
+
+    if (!snapshots || snapshots.length === 0) {
+      return NextResponse.json(
+        { error: 'No historical data found for this stock' },
         { status: 404 }
       )
     }
 
     // Calculate statistics
-    const prices = stock.stockData.map(d => d.close)
+    const prices = snapshots.map(d => d.price)
     const currentPrice = prices[0]
     const oldestPrice = prices[prices.length - 1]
     
@@ -51,21 +54,22 @@ export async function GET(
     const changePercent = ((change / oldestPrice) * 100)
 
     return NextResponse.json({
-      symbol: stock.symbol,
-      name: stock.name,
+      symbol,
+      name: symbol, // We don't store name in snapshots table
       currentPrice,
       oldestPrice,
       change,
       changePercent,
       days,
-      dataPoints: stock.stockData.length,
-      history: stock.stockData.map(d => ({
-        date: d.timestamp,
-        open: d.open,
-        high: d.high,
-        low: d.low,
-        close: d.close,
-        volume: d.volume.toString(),
+      dataPoints: snapshots.length,
+      history: snapshots.map(d => ({
+        date: d.snapshot_date,
+        time: d.snapshot_time,
+        price: d.price,
+        change: d.change,
+        changePercent: d.change_percent,
+        volume: d.volume,
+        marketCap: d.market_cap,
       }))
     })
   } catch (error) {
@@ -74,7 +78,5 @@ export async function GET(
       { error: 'Failed to fetch historical data' },
       { status: 500 }
     )
-  } finally {
-    await prisma.$disconnect()
   }
 }
