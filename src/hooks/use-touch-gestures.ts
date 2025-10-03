@@ -93,7 +93,7 @@ export function useTouchGestures(options: TouchGestureOptions) {
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     // Handle pinch gestures
-    if (e.touches.length === 2 && onPinch) {
+    if (e.touches.length === 2 && onPinch && elementRef.current) {
       const touch1 = e.touches[0]
       const touch2 = e.touches[1]
 
@@ -103,7 +103,7 @@ export function useTouchGestures(options: TouchGestureOptions) {
       )
 
       // Store initial distance for pinch calculation
-      if (!elementRef.current?.dataset.initialDistance) {
+      if (!elementRef.current.dataset.initialDistance) {
         elementRef.current.dataset.initialDistance = currentDistance.toString()
       } else {
         const initialDistance = parseFloat(elementRef.current.dataset.initialDistance)
@@ -146,8 +146,14 @@ export function useSwipeableCharts(chartViews: string[], currentView: string, on
   }, [chartViews, currentView])
 
   const swipeHandlers = {
-    onSwipeLeft: () => onViewChange(getNextView('left')),
-    onSwipeRight: () => onViewChange(getNextView('right')),
+    onSwipeLeft: () => {
+      const nextView = getNextView('left')
+      onViewChange(nextView)
+    },
+    onSwipeRight: () => {
+      const nextView = getNextView('right')
+      onViewChange(nextView)
+    },
   }
 
   return swipeHandlers
