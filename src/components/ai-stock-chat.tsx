@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Send, Bot, User, Loader2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -118,7 +120,28 @@ export function AIStockChat({ symbol, stockData }: AIStockChatProps) {
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h1: ({ node, ...props }) => <h1 className="text-lg font-bold" {...props} />,
+                          h2: ({ node, ...props }) => <h2 className="text-base font-bold" {...props} />,
+                          h3: ({ node, ...props }) => <h3 className="text-sm font-semibold" {...props} />,
+                          p: ({ node, ...props }) => <p className="text-sm leading-relaxed" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="text-sm space-y-0.5" {...props} />,
+                          ol: ({ node, ...props }) => <ol className="text-sm space-y-0.5" {...props} />,
+                          li: ({ node, ...props }) => <li className="text-sm" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-semibold text-foreground" {...props} />,
+                          code: ({ node, ...props }) => <code className="bg-background/50 px-1 py-0.5 rounded text-xs" {...props} />,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  )}
                   <p className="text-xs opacity-50 mt-1">
                     {new Date(message.timestamp).toLocaleTimeString()}
                   </p>
