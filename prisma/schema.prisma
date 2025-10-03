@@ -94,6 +94,7 @@ model WatchlistItem {
   targetPrice Float?
   stopLoss    Float?
   notes       String?
+  category    String?   // e.g., "Technology", "Banking", "Energy", "Healthcare"
   watchlist   Watchlist @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { Star, TrendingUp, TrendingDown, Trash2, ArrowLeft, Calendar } from 'lucide-react'
+import { Star, TrendingUp, TrendingDown, Trash2, ArrowLeft, Calendar, Tag } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useWatchlist } from '@/contexts/watchlist-context'
@@ -281,6 +281,12 @@ export default function WatchlistPage() {
             </div>
             {watchlist.length > 0 && (
               <div className="flex gap-2">
+                <Link href="/watchlist/groups">
+                  <Button variant="outline">
+                    <Tag className="h-4 w-4 mr-2" />
+                    By Category
+                  </Button>
+                </Link>
                 <Button
                   variant="outline"
                   onClick={async () => {

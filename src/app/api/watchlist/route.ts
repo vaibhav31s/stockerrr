@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { symbol, addedPrice, targetPrice, stopLoss, notes } = body
+    const { symbol, addedPrice, targetPrice, stopLoss, notes, category } = body
 
     if (!symbol) {
       return NextResponse.json({ error: 'Symbol is required' }, { status: 400 })
@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
         targetPrice,
         stopLoss,
         notes,
+        category,
       }
     })
 
