@@ -1,12 +1,14 @@
 "use client"
 
 import { useEffect, useState } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Brain } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Brain, LineChart } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { InteractiveStockChart } from '@/components/interactive-stock-chart'
 import { AdvancedStockChart } from '@/components/advanced-stock-chart'
+import { TradingViewChart } from '@/components/tradingview-chart'
 import { HoverGlow } from '@/components/visual-effects'
 import Link from 'next/link'
 
@@ -98,22 +100,59 @@ export function StockCard({ symbol }: StockCardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Advanced Interactive Chart */}
-      <AdvancedStockChart 
-        symbol={stockData.symbol}
-        stockData={{
-          symbol: stockData.symbol,
-          price: stockData.price,
-          changePercent: stockData.changePercent,
-          volume: stockData.volume,
-          high: stockData.fiftyTwoWeekHigh,
-          low: stockData.fiftyTwoWeekLow,
-          open: stockData.price * 0.99, // Approximate
-          previousClose: stockData.price - stockData.change,
-          yearHigh: stockData.fiftyTwoWeekHigh,
-          yearLow: stockData.fiftyTwoWeekLow
-        }}
-      />
+      {/* Chart Tabs - Advanced vs TradingView */}
+      <Tabs defaultValue="advanced" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="advanced">
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Advanced Chart
+          </TabsTrigger>
+          <TabsTrigger value="tradingview">
+            <LineChart className="h-4 w-4 mr-2" />
+            TradingView
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="advanced" className="mt-4">
+          {/* Advanced Interactive Chart */}
+          <AdvancedStockChart 
+            symbol={stockData.symbol}
+            stockData={{
+              symbol: stockData.symbol,
+              price: stockData.price,
+              changePercent: stockData.changePercent,
+              volume: stockData.volume,
+              high: stockData.fiftyTwoWeekHigh,
+              low: stockData.fiftyTwoWeekLow,
+              open: stockData.price * 0.99, // Approximate
+              previousClose: stockData.price - stockData.change,
+              yearHigh: stockData.fiftyTwoWeekHigh,
+              yearLow: stockData.fiftyTwoWeekLow
+            }}
+          />
+        </TabsContent>
+        
+        <TabsContent value="tradingview" className="mt-4">
+          {/* TradingView Professional Chart */}
+          <Card>
+            <CardContent className="p-2">
+              <TradingViewChart 
+                key={stockData.symbol} // Force re-render on symbol change
+                symbol={(() => {
+                  const cleanSymbol = stockData.symbol.replace(/\.(NS|NA|BO)$/i, '');
+                  
+                  // TradingView uses BSE_EOD (End of Day) format for Indian stocks
+                  // This works for both NSE and BSE listed stocks
+                  return `BSE_EOD:${cleanSymbol}`;
+                })()}
+                originalSymbol={stockData.symbol} // Pass original symbol for URL generation
+                theme="dark"
+                height={600}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
       
       {/* Additional Stock Info Card */}
       <HoverGlow glowColor={isPositive ? "#10b981" : "#ef4444"}>
